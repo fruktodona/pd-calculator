@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор повторного доступа</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F7FA;
+    --surface: #FFFFFF;
+    --surface2: #F0F4F8;
+    --border: #DDE3EC;
+    --accent: #3B82C4;
+    --accent2: #E07B2A;
+    --accent3: #DC3545;
+    --text: #1A2233;
+    --text-muted: #6B7A99;
+    --success-bg: #EDF7F5;
+    --success: #1A9E7E;
+    --warn-bg: #FEF6EC;
+    --warn: #B45D0E;
+    --danger-bg: #FEF0F0;
+    --danger: #C0392B;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Golos Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 40% at 5% 0%, rgba(59,130,196,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 95% 100%, rgba(224,123,42,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* Шапка */
+  .header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(59,130,196,0.25);
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+    background: rgba(59,130,196,0.07);
+  }
+
+  .header h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(18px, 4vw, 26px);
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* Выбор режима */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .mode-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    cursor: pointer;
+    padding: 24px 20px;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  .mode-btn:hover {
+    border-color: var(--accent);
+    background: rgba(59,130,196,0.06);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+
+  .mode-btn.active {
+    border-color: var(--accent);
+    background: rgba(59,130,196,0.07);
+  }
+
+  .mode-btn .mode-icon {
+    font-size: 32px;
+  }
+
+  .mode-btn .mode-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .mode-btn .mode-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .mode-btn.mode-extern .mode-title { color: var(--accent); }
+  .mode-btn.mode-endq .mode-title { color: var(--accent2); }
+
+  /* Разделитель */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Прогресс */
+  .progress-wrap { margin-bottom: 28px; }
+
+  .progress-bar-bg {
+    height: 3px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  .mode-extern-active .progress-bar-fill { background: linear-gradient(90deg, var(--accent), #38B2AC); }
+  .mode-endq-active .progress-bar-fill { background: linear-gradient(90deg, var(--accent2), #F6A623); }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+    font-family: 'Unbounded', sans-serif;
+  }
+
+  /* Хлебные крошки */
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 20px;
+    min-height: 28px;
+  }
+
+  .breadcrumb-item {
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 12px;
+    color: var(--text-muted);
+  }
+
+  .breadcrumb-item .bc-val { color: var(--accent); font-weight: 600; }
+  .mode-endq-active .breadcrumb-item .bc-val { color: var(--accent2); }
+
+  /* Карточка */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 14px;
+    animation: slideIn 0.3s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-num {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .mode-extern-active .step-num { color: var(--accent); }
+  .mode-endq-active .step-num { color: var(--accent2); }
+
+  .question {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.45;
+    margin-bottom: 22px;
+    color: var(--text);
+  }
+
+  /* Подсказка в вопросе */
+  .question-hint {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* Варианты */
+  .options { display: flex; flex-direction: column; gap: 9px; }
+
+  .option-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 13px 18px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.17s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .option-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    transform: scaleY(0);
+    transition: transform 0.17s ease;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .mode-extern-active .option-btn::before { background: var(--accent); }
+  .mode-endq-active .option-btn::before { background: var(--accent2); }
+
+  .option-btn:hover { transform: translateX(4px); }
+  .mode-extern-active .option-btn:hover { border-color: var(--accent); background: rgba(59,130,196,0.06); }
+  .mode-endq-active .option-btn:hover { border-color: var(--accent2); background: rgba(224,123,42,0.06); }
+
+  .option-btn:hover::before { transform: scaleY(1); }
+
+  .option-btn .opt-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .opt-text { display: flex; flex-direction: column; gap: 3px; }
+  .opt-label { line-height: 1.4; }
+  .opt-hint { font-size: 12px; color: var(--text-muted); font-weight: 400; line-height: 1.4; }
+
+  /* Поле даты */
+  .date-wrap { display: flex; flex-direction: column; gap: 11px; }
+
+  .date-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 16px;
+    padding: 13px 17px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.18s;
+  }
+
+  .date-input:focus { border-color: var(--accent); }
+  .mode-endq-active .date-input:focus { border-color: var(--accent2); }
+  .date-input::placeholder { color: var(--text-muted); }
+  .date-input.error { border-color: var(--danger) !important; }
+
+  .date-error {
+    font-size: 12px;
+    color: var(--danger);
+    display: none;
+  }
+
+  .btn-primary {
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 13px 22px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    letter-spacing: 0.05em;
+    align-self: flex-start;
+  }
+
+  .mode-extern-active .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #2563A8 100%);
+    color: #FFFFFF;
+  }
+
+  .mode-endq-active .btn-primary {
+    background: linear-gradient(135deg, var(--accent2) 0%, #C46518 100%);
+    color: #FFFFFF;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  }
+
+  /* Результат */
+  .result-card {
+    border-radius: var(--radius);
+    padding: 28px;
+    animation: slideIn 0.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  .result-card.success { background: var(--success-bg); border: 1px solid rgba(26,158,126,0.25); }
+  .result-card.warn    { background: var(--warn-bg);    border: 1px solid rgba(224,123,42,0.25); }
+  .result-card.danger  { background: var(--danger-bg);  border: 1px solid rgba(192,57,43,0.25); }
+  .result-card.neutral { background: var(--surface);    border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .result-card.info    { background: #EEF4FB;           border: 1px solid rgba(59,130,196,0.25); }
+
+  .result-label {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.65;
+  }
+
+  .result-main {
+    font-family: 'Unbounded', sans-serif;
+    font-size: clamp(17px, 3.5vw, 24px);
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 14px;
+  }
+
+  .result-card.success .result-main { color: var(--success); }
+  .result-card.warn    .result-main { color: var(--warn); }
+  .result-card.danger  .result-main { color: var(--danger); }
+  .result-card.neutral .result-main { color: var(--text); }
+  .result-card.info    .result-main { color: var(--accent); }
+
+  .result-desc {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .result-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.04);
+    border-radius: var(--radius-sm);
+    padding: 11px 16px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .result-date strong {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 16px;
+  }
+
+  .result-note {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .result-note strong { color: var(--text); }
+
+  /* Кнопки внизу результата */
+  .result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .reset-btn, .switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-muted);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    padding: 8px 17px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .reset-btn:hover  { border-color: var(--accent);  color: var(--accent); background: rgba(59,130,196,0.05); }
+  .switch-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(224,123,42,0.05); }
+
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  /* Скрытые секции */
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container" id="app">
+
+  <div class="header">
+    <div class="header-badge">Инструмент для учителей</div>
+    <h1>Калькулятор<br>повторного доступа</h1>
+    <p>Выберите ситуацию — визард задаст только нужные вопросы</p>
+  </div>
+
+  <!-- Выбор режима -->
+  <div id="modeSelect">
+    <div class="mode-grid">
+      <button class="mode-btn mode-extern" onclick="startMode('extern')">
+        <span class="mode-icon">🎓</span>
+        <span class="mode-title">Ученик-экстерн</span>
+        <span class="mode-desc">Есть метка 🎓 или предмет с OLD</span>
+      </button>
+      <button class="mode-btn mode-endq" onclick="startMode('endq')">
+        <span class="mode-icon">📅</span>
+        <span class="mode-title">Конец четверти</span>
+        <span class="mode-desc">Последние дни загрузки ДЗ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Визард -->
+  <div id="wizardSection" class="hidden">
+    <div class="divider" id="modeLabelDiv"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+    <div id="breadcrumb" class="breadcrumb"></div>
+    <div id="wizard"></div>
+  </div>
+
+  <div class="footer">
+    Все вычисления выполняются локально в браузере.<br>
+    Данные никуда не отправляются.
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  СОСТОЯНИЕ
+// ═══════════════════════════════════════════════════════════════
+let mode = null; // 'extern' | 'endq'
+const state = { answers: {}, reviewDate: null, deadlineDate: null };
+
+// ═══════════════════════════════════════════════════════════════
+//  ШАГИ — ЭКСТЕРН
+// ═══════════════════════════════════════════════════════════════
+const externSteps = {
+
+  start: {
+    id: 'start',
+    q: 'Есть ли у ученика метка 🎓?',
+    options: [
+      { label: 'Да, метка 🎓 есть', icon: '✅', value: 'yes', next: 'old' },
+      { label: 'Нет метки 🎓',       icon: '❌', value: 'no',  next: 'result' },
+    ]
+  },
+
+  old: {
+    id: 'old',
+    q: 'В названии предмета есть слово OLD?',
+    options: [
+      { label: 'Да, есть OLD', icon: '📂', value: 'yes', next: 'date' },
+      { label: 'Нет, OLD нет', icon: '✏️', value: 'no',  next: 'badge' },
+    ]
+  },
+
+  badge: {
+    id: 'badge',
+    q: 'Что указано в метке 🎓?',
+    options: [
+      { label: '«да, ___ класс» — класс совпадает с классом ученика', icon: '🟢', value: 'same',   hint: '', next: 'date' },
+      { label: '«да, ___ класс» — класс отличается',                  icon: '🟡', value: 'diff',   hint: '', next: 'date' },
+      { label: '«да» + 111, 112 и т.д. — Школа онлайн',               icon: '🏫', value: 'online', hint: '', next: 'date' },
+      { label: '«нет»',                                                icon: '🔴', value: 'no',     hint: '', next: 'quarter' },
+    ]
+  },
+
+  quarter: {
+    id: 'quarter',
+    q: 'За какую четверть работа относительно текущей?',
+    options: [
+      { label: 'Текущая или будущая четверть', icon: '📅', value: 'current', next: 'result' },
+      { label: 'Прошлая четверть',              icon: '🗓️', value: 'past',    next: 'date' },
+    ]
+  },
+
+  date: { id: 'date', type: 'date', q: 'Введите дату проверки', field: 'reviewDate' },
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  ШАГИ — КОНЕЦ ЧЕТВЕРТИ
+// ═══════════════════════════════════════════════════════════════
+const endqSteps = {
+
+  ar: {
+    id: 'ar',
+    q: 'Это аттестационная работа (АР)?',
+    options: [
+      { label: 'Да, это АР', icon: '📝', value: 'yes', next: 'date_review' },
+      { label: 'Нет, обычное ДЗ', icon: '📄', value: 'no', next: 'when_uploaded' },
+    ]
+  },
+
+  when_uploaded: {
+    id: 'when_uploaded',
+    q: 'Когда ученик загрузил работу?',
+    options: [
+      { label: 'В последний день загрузки', icon: '🔴', value: 'last_day',   next: 'suspicion' },
+      { label: 'Не в последний день',        icon: '🟢', value: 'before',     next: 'when_checked' },
+    ]
+  },
+
+  when_checked: {
+    id: 'when_checked',
+    q: 'Когда вы проверяете работу?',
+    hint: 'Сравните с датой окончания загрузки в карточке ДЗ',
+    options: [
+      { label: 'До последнего дня загрузки включительно — ещё есть время', icon: '✅', value: 'before_deadline', next: 'date_deadline' },
+      { label: 'В последний день загрузки или после его окончания',         icon: '⏰', value: 'on_deadline',     next: 'date_review' },
+    ]
+  },
+
+  suspicion: {
+    id: 'suspicion',
+    q: 'Есть подозрение на взрослый почерк или чужой голос?',
+    options: [
+      { label: 'Да, есть подозрение', icon: '🔍', value: 'yes', hint: 'Факт списывания, взрослый почерк в карточке', next: 'date_review' },
+      { label: 'Нет подозрений',      icon: '✅', value: 'no',  next: 'chat_request' },
+    ]
+  },
+
+  chat_request: {
+    id: 'chat_request',
+    q: 'Ученик сам обратился в чат с просьбой открыть повторный доступ?',
+    hint: 'Речь о работе, которая ещё НЕ проверена',
+    options: [
+      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'chat_duty' },
+      { label: 'Нет',               icon: '❌', value: 'no',  next: 'result' },
+    ]
+  },
+
+  chat_duty: {
+    id: 'chat_duty',
+    q: 'В чате есть дежурный учитель прямо сейчас?',
+    options: [
+      { label: 'Да, я дежурю / кто-то дежурит', icon: '👤', value: 'yes', next: 'result' },
+      { label: 'Нет, чат без дежурного',         icon: '🔕', value: 'no',  next: 'result' },
+    ]
+  },
+
+  date_review:   { id: 'date_review',   type: 'date', q: 'Введите дату проверки (сегодняшнюю)',       field: 'reviewDate' },
+  date_deadline: { id: 'date_deadline', type: 'date', q: 'Введите дату окончания загрузки из карточки ДЗ', field: 'deadlineDate' },
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  РЕЗУЛЬТАТЫ
+// ═══════════════════════════════════════════════════════════════
+function calcExternResult() {
+  const a = state.answers;
+
+  if (a.start === 'no') return {
+    type: 'neutral', срок: 'Стандартные правила',
+    desc: 'Ученик не является экстерном.',
+    note: 'Используйте обычный алгоритм предоставления повторного доступа.',
+    days: null,
+  };
+
+  if (a.old === 'yes') return {
+    type: 'success', срок: '+4 недели',
+    desc: 'Предмет с пометкой OLD + метка 🎓.',
+    note: 'Повторный доступ предоставляется на 28 дней от даты проверки.',
+    days: 28,
+  };
+
+  if (['same','diff','online'].includes(a.badge)) return {
+    type: 'success', срок: '+4 недели',
+    desc: 'Ученик является экстерном.',
+    note: 'Повторный доступ — 28 дней от даты проверки, независимо от четверти.',
+    days: 28,
+  };
+
+  if (a.badge === 'no' && a.quarter === 'current') return {
+    type: 'neutral', срок: 'По стандартным срокам',
+    desc: 'Метка «нет», работа за текущую или будущую четверть.',
+    note: 'Ученик не является экстерном. Применяйте стандартный алгоритм.',
+    days: null,
+  };
+
+  if (a.badge === 'no' && a.quarter === 'past') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Метка «нет», работа за прошлую четверть.',
+    note: 'Повторный доступ — 1 день от даты проверки.',
+    days: 1,
+  };
+
+  return {
+    type: 'danger', срок: 'Уточнить у куратора',
+    desc: 'Нестандартный случай.',
+    note: 'Пожалуйста, уточните ситуацию у куратора направления.',
+    days: null,
+  };
+}
+
+function calcEndqResult() {
+  const a = state.answers;
+
+  // АР — всегда +1 день
+  if (a.ar === 'yes') return {
+    type: 'success', срок: '+1 день',
+    desc: 'Аттестационная работа (АР).',
+    note: 'АР всегда получают повторный доступ на +1 день от даты проверки.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено не в последний день, проверяется до дедлайна
+  if (a.when_uploaded === 'before' && a.when_checked === 'before_deadline') return {
+    type: 'success', срок: 'До даты окончания загрузки',
+    desc: 'Работа загружена заранее, проверяется до дедлайна.',
+    note: 'Повторный доступ предоставляется до даты окончания загрузки, указанной в карточке ДЗ.',
+    days: 0, dateField: 'deadlineDate',
+  };
+
+  // Загружено не в последний день, проверяется в последний день или после
+  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Работа загружена заранее, но проверяется в последний день или после.',
+    note: 'Повторный доступ предоставляется на +1 день от сегодняшней даты.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено в последний день — подозрение на почерк/голос
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'yes') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Загружено в последний день, но есть подозрение на взрослый почерк / чужой голос.',
+    note: 'Это исключение из правила. Повторный доступ — +1 день от даты проверки.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено в последний день — ученик просит в чате, дежурный есть
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
+      && a.chat_request === 'yes' && a.chat_duty === 'yes') return {
+    type: 'warn', срок: 'До 23:59 сегодня',
+    desc: 'Ученик обратился в чат, дежурный есть.',
+    note: 'Работа ещё не проверена — откройте повторный доступ до 23:59 (МСК) текущего дня.',
+    days: 0, dateField: 'reviewDate', endOfDay: true,
+  };
+
+  // Загружено в последний день — ученик просит в чате, дежурного нет
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
+      && a.chat_request === 'yes' && a.chat_duty === 'no') return {
+    type: 'info', срок: 'До 23:59 дня дежурства',
+    desc: 'Ученик просил в чате, но дежурного не было.',
+    note: '📌 Когда вы приступите к дежурству — откройте повторный доступ до 23:59 (МСК) того дня, когда зайдёте в чат.',
+    days: null,
+  };
+
+  // Загружено в последний день — никаких исключений
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
+      && a.chat_request === 'no') return {
+    type: 'danger', срок: 'Повторный доступ не предоставляется',
+    desc: 'Работа загружена в последний день, исключений нет.',
+    note: 'По правилам повторный доступ в этом случае не открывается. Если есть сомнения — уточните у куратора.',
+    days: null,
+  };
+
+  return {
+    type: 'danger', срок: 'Уточнить у куратора',
+    desc: 'Нестандартный случай.',
+    note: 'Пожалуйста, уточните ситуацию у куратора направления.',
+    days: null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  УТИЛИТЫ
+// ═══════════════════════════════════════════════════════════════
+function addDays(str, days) {
+  const [d,m,y] = str.split('.').map(Number);
+  const date = new Date(y, m-1, d);
+  date.setDate(date.getDate() + days);
+  return `${String(date.getDate()).padStart(2,'0')}.${String(date.getMonth()+1).padStart(2,'0')}.${date.getFullYear()}`;
+}
+
+function validateDate(str) {
+  const re = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+  if (!re.test(str)) return false;
+  const [,d,m,y] = str.match(re).map(Number);
+  const date = new Date(y, m-1, d);
+  return date.getDate()===d && date.getMonth()===m-1 && date.getFullYear()===y;
+}
+
+function accentColor() {
+  return mode === 'extern' ? 'var(--accent)' : 'var(--accent2)';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  РЕНДЕР
+// ═══════════════════════════════════════════════════════════════
+const bcLabels = {
+  // extern
+  start:   { yes: '🎓 Метка: есть', no: '🎓 Метка: нет' },
+  old:     { yes: 'OLD: да', no: 'OLD: нет' },
+  badge:   { same: 'Метка: да, класс совпадает', diff: 'Метка: да, класс отличается', online: 'Метка: Школа онлайн', no: 'Метка: нет' },
+  quarter: { current: '📅 Четверть: текущая/будущая', past: '🗓 Четверть: прошлая' },
+  // endq
+  ar:           { yes: '📝 АР: да', no: '📄 АР: нет' },
+  when_uploaded:{ last_day: '🔴 Загружено: в последний день', before: '🟢 Загружено: заранее' },
+  when_checked: { before_deadline: '✅ Проверка: до дедлайна', on_deadline: '⏰ Проверка: в последний день или позже' },
+  suspicion:    { yes: '🔍 Подозрение: есть', no: '✅ Подозрение: нет' },
+  chat_request: { yes: '💬 Просьба в чате: да', no: '❌ Просьба в чате: нет' },
+  chat_duty:    { yes: '👤 Дежурный: есть', no: '🔕 Дежурный: нет' },
+};
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = '';
+  for (const [key, val] of Object.entries(state.answers)) {
+    if (!bcLabels[key] || !bcLabels[key][val]) continue;
+    const item = document.createElement('div');
+    item.className = 'breadcrumb-item';
+    item.innerHTML = `<span class="bc-val">${bcLabels[key][val]}</span>`;
+    bc.appendChild(item);
+  }
+  ['reviewDate','deadlineDate'].forEach(f => {
+    if (state[f]) {
+      const item = document.createElement('div');
+      item.className = 'breadcrumb-item';
+      const lbl = f === 'reviewDate' ? 'Дата проверки' : 'Дедлайн';
+      item.innerHTML = `${lbl}: <span class="bc-val">${state[f]}</span>`;
+      bc.appendChild(item);
+    }
+  });
+}
+
+function updateProgress(cur, total) {
+  const pct = Math.round((cur / total) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent =
+    cur < total ? `Шаг ${cur} из ${total}` : 'Готово';
+}
+
+function renderStep(stepId) {
+  const wizard = document.getElementById('wizard');
+  wizard.innerHTML = '';
+
+  const steps = mode === 'extern' ? externSteps : endqSteps;
+  const totalSteps = mode === 'extern' ? 4 : 6;
+  const stepOrder = mode === 'extern'
+    ? ['start','old','badge','quarter','date']
+    : ['ar','when_uploaded','when_checked','suspicion','chat_request','chat_duty','date_review','date_deadline'];
+
+  const idx = stepOrder.indexOf(stepId) + 1;
+  updateProgress(idx, totalSteps);
+  renderBreadcrumb();
+
+  if (stepId === 'result') {
+    renderResult();
+    updateProgress(totalSteps, totalSteps);
+    return;
+  }
+
+  const step = steps[stepId];
+  if (!step) { renderResult(); return; }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const numEl = document.createElement('div');
+  numEl.className = 'step-num';
+  numEl.textContent = `Шаг ${idx}`;
+  card.appendChild(numEl);
+
+  const qEl = document.createElement('div');
+  qEl.className = 'question';
+  qEl.textContent = step.q;
+  if (step.hint) {
+    const hint = document.createElement('div');
+    hint.className = 'question-hint';
+    hint.textContent = step.hint;
+    qEl.appendChild(hint);
+  }
+  card.appendChild(qEl);
+
+  if (step.type === 'date') {
+    const wrap = document.createElement('div');
+    wrap.className = 'date-wrap';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'date-input';
+    input.placeholder = 'ДД.ММ.ГГГГ';
+    input.maxLength = 10;
+    input.addEventListener('input', () => {
+      let v = input.value.replace(/\D/g,'');
+      if (v.length > 2) v = v.slice(0,2) + '.' + v.slice(2);
+      if (v.length > 5) v = v.slice(0,5) + '.' + v.slice(5);
+      input.value = v.slice(0,10);
+      input.classList.remove('error');
+      errEl.style.display = 'none';
+    });
+
+    const errEl = document.createElement('div');
+    errEl.className = 'date-error';
+    errEl.textContent = 'Введите корректную дату в формате ДД.ММ.ГГГГ';
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-primary';
+    btn.textContent = 'Продолжить →';
+
+    btn.addEventListener('click', () => {
+      const val = input.value.trim();
+      if (!validateDate(val)) {
+        input.classList.add('error');
+        errEl.style.display = 'block';
+        return;
+      }
+      state[step.field] = val;
+      wizard.innerHTML = '';
+      renderResult();
+      updateProgress(totalSteps, totalSteps);
+    });
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+    wrap.appendChild(input);
+    wrap.appendChild(errEl);
+    wrap.appendChild(btn);
+    card.appendChild(wrap);
+
+  } else {
+    const opts = document.createElement('div');
+    opts.className = 'options';
+    step.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      const textDiv = document.createElement('div');
+      textDiv.className = 'opt-text';
+      textDiv.innerHTML = `<span class="opt-label">${opt.label}</span>`;
+      if (opt.hint) textDiv.innerHTML += `<span class="opt-hint">${opt.hint}</span>`;
+      btn.innerHTML = `<span class="opt-icon">${opt.icon}</span>`;
+      btn.appendChild(textDiv);
+      btn.addEventListener('click', () => {
+        state.answers[step.id] = opt.value;
+        wizard.innerHTML = '';
+        renderStep(opt.next);
+      });
+      opts.appendChild(btn);
+    });
+    card.appendChild(opts);
+  }
+
+  wizard.appendChild(card);
+}
+
+function renderResult() {
+  renderBreadcrumb();
+  const wizard = document.getElementById('wizard');
+  const result = mode === 'extern' ? calcExternResult() : calcEndqResult();
+
+  const card = document.createElement('div');
+  card.className = `result-card ${result.type}`;
+
+  const label = document.createElement('div');
+  label.className = 'result-label';
+  label.textContent = '📋 Решение';
+  card.appendChild(label);
+
+  const main = document.createElement('div');
+  main.className = 'result-main';
+  main.textContent = result.срок;
+  card.appendChild(main);
+
+  const desc = document.createElement('div');
+  desc.className = 'result-desc';
+  desc.textContent = result.desc;
+  card.appendChild(desc);
+
+  // Дата
+  if (result.days !== null) {
+    const dateField = result.dateField || 'reviewDate';
+    const baseDate = state[dateField];
+    if (baseDate) {
+      const dateEl = document.createElement('div');
+      dateEl.className = 'result-date';
+      if (result.endOfDay) {
+        dateEl.innerHTML = `📅 До: <strong>${baseDate} 23:59 МСК</strong>`;
+      } else if (result.days === 0) {
+        dateEl.innerHTML = `📅 Дата окончания ПД: <strong>${baseDate}</strong>`;
+      } else {
+        dateEl.innerHTML = `📅 Дата окончания ПД: <strong>${addDays(baseDate, result.days)}</strong>`;
+      }
+      card.appendChild(dateEl);
+    }
+  }
+
+  const note = document.createElement('div');
+  note.className = 'result-note';
+  note.innerHTML = result.note;
+  card.appendChild(note);
+
+  // Кнопки
+  const actions = document.createElement('div');
+  actions.className = 'result-actions';
+
+  const reset = document.createElement('button');
+  reset.className = 'reset-btn';
+  reset.innerHTML = '↩ Начать заново';
+  reset.addEventListener('click', () => resetWizard());
+  actions.appendChild(reset);
+
+  const switchBtn = document.createElement('button');
+  switchBtn.className = 'switch-btn';
+  switchBtn.innerHTML = mode === 'extern' ? '📅 Перейти к концу четверти' : '🎓 Перейти к экстернам';
+  switchBtn.addEventListener('click', () => {
+    const newMode = mode === 'extern' ? 'endq' : 'extern';
+    startMode(newMode);
+  });
+  actions.appendChild(switchBtn);
+
+  card.appendChild(actions);
+  wizard.appendChild(card);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  УПРАВЛЕНИЕ РЕЖИМАМИ
+// ═══════════════════════════════════════════════════════════════
+function startMode(m) {
+  mode = m;
+  state.answers = {};
+  state.reviewDate = null;
+  state.deadlineDate = null;
+
+  document.getElementById('modeSelect').classList.add('hidden');
+  document.getElementById('wizardSection').classList.remove('hidden');
+
+  const app = document.getElementById('app');
+  app.classList.remove('mode-extern-active','mode-endq-active');
+  app.classList.add(m === 'extern' ? 'mode-extern-active' : 'mode-endq-active');
+
+  const divLabel = document.getElementById('modeLabelDiv');
+  divLabel.textContent = m === 'extern' ? '🎓 Экстерн' : '📅 Конец четверти';
+
+  document.getElementById('breadcrumb').innerHTML = '';
+  document.getElementById('wizard').innerHTML = '';
+
+  const firstStep = m === 'extern' ? 'start' : 'ar';
+  renderStep(firstStep);
+}
+
+function resetWizard() {
+  state.answers = {};
+  state.reviewDate = null;
+  state.deadlineDate = null;
+  document.getElementById('breadcrumb').innerHTML = '';
+  document.getElementById('wizard').innerHTML = '';
+  const firstStep = mode === 'extern' ? 'start' : 'ar';
+  renderStep(firstStep);
+}
+</script>
+</body>
+</html>
