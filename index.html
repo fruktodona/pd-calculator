@@ -523,21 +523,21 @@ const state = { answers: {}, reviewDate: null, deadlineDate: null };
 // ═══════════════════════════════════════════════════════════════
 const externSteps = {
 
-  start: {
-    id: 'start',
-    q: 'Есть ли у ученика метка 🎓?',
-    options: [
-      { label: 'Да, метка 🎓 есть', icon: '✅', value: 'yes', next: 'old' },
-      { label: 'Нет метки 🎓',       icon: '❌', value: 'no',  next: 'result' },
-    ]
-  },
-
   old: {
     id: 'old',
     q: 'В названии предмета есть слово OLD?',
     options: [
       { label: 'Да, есть OLD', icon: '📂', value: 'yes', next: 'date' },
-      { label: 'Нет, OLD нет', icon: '✏️', value: 'no',  next: 'badge' },
+      { label: 'Нет, OLD нет', icon: '✏️', value: 'no',  next: 'start' },
+    ]
+  },
+
+  start: {
+    id: 'start',
+    q: 'Есть ли у ученика метка 🎓?',
+    options: [
+      { label: 'Да, метка 🎓 есть', icon: '✅', value: 'yes', next: 'badge' },
+      { label: 'Нет метки 🎓',       icon: '❌', value: 'no',  next: 'result' },
     ]
   },
 
@@ -573,8 +573,8 @@ const endqSteps = {
     id: 'ar',
     q: 'Это аттестационная работа (АР)?',
     options: [
-      { label: 'Да, это АР', icon: '📝', value: 'yes', next: 'date_review' },
-      { label: 'Нет, обычное ДЗ', icon: '📄', value: 'no', next: 'when_uploaded' },
+      { label: 'Да, это АР',      icon: '📝', value: 'yes', next: 'date_review' },
+      { label: 'Нет, обычное ДЗ', icon: '📄', value: 'no',  next: 'when_uploaded' },
     ]
   },
 
@@ -582,8 +582,8 @@ const endqSteps = {
     id: 'when_uploaded',
     q: 'Когда ученик загрузил работу?',
     options: [
-      { label: 'В последний день загрузки', icon: '🔴', value: 'last_day',   next: 'suspicion' },
-      { label: 'Не в последний день',        icon: '🟢', value: 'before',     next: 'when_checked' },
+      { label: 'В последний день загрузки', icon: '🔴', value: 'last_day', next: 'suspicion' },
+      { label: 'Не в последний день',        icon: '🟢', value: 'before',   next: 'when_checked' },
     ]
   },
 
@@ -592,8 +592,19 @@ const endqSteps = {
     q: 'Когда вы проверяете работу?',
     hint: 'Сравните с датой окончания загрузки в карточке ДЗ',
     options: [
-      { label: 'До последнего дня загрузки включительно — ещё есть время', icon: '✅', value: 'before_deadline', next: 'date_deadline' },
-      { label: 'В последний день загрузки или после его окончания',         icon: '⏰', value: 'on_deadline',     next: 'date_review' },
+      { label: 'До последнего дня загрузки — ещё есть время', icon: '✅', value: 'before_deadline', next: 'date_deadline' },
+      { label: 'В последний день загрузки или после',          icon: '⏰', value: 'on_deadline',     next: 'chat_request_before' },
+    ]
+  },
+
+  // Ветка А: загружено не в последний день, проверяется в дедлайн/после
+  chat_request_before: {
+    id: 'chat_request_before',
+    q: 'Ученик написал в чат с просьбой открыть повторный доступ?',
+    hint: 'Работа ещё не проверена на момент обращения',
+    options: [
+      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'date_review' },
+      { label: 'Нет',               icon: '❌', value: 'no',  next: 'date_review' },
     ]
   },
 
@@ -601,31 +612,23 @@ const endqSteps = {
     id: 'suspicion',
     q: 'Есть подозрение на взрослый почерк или чужой голос?',
     options: [
-      { label: 'Да, есть подозрение', icon: '🔍', value: 'yes', hint: 'Факт списывания, взрослый почерк в карточке', next: 'date_review' },
-      { label: 'Нет подозрений',      icon: '✅', value: 'no',  next: 'chat_request' },
+      { label: 'Да, есть подозрение', icon: '🔍', value: 'yes', hint: 'Факт списывания / взрослый почерк в карточке', next: 'date_review' },
+      { label: 'Нет подозрений',      icon: '✅', value: 'no',  next: 'chat_request_last' },
     ]
   },
 
-  chat_request: {
-    id: 'chat_request',
-    q: 'Ученик сам обратился в чат с просьбой открыть повторный доступ?',
-    hint: 'Речь о работе, которая ещё НЕ проверена',
+  // Ветка Б: загружено в последний день, нет подозрений
+  chat_request_last: {
+    id: 'chat_request_last',
+    q: 'Ученик написал в чат с просьбой открыть повторный доступ?',
+    hint: 'Работа ещё не проверена на момент обращения',
     options: [
-      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'chat_duty' },
+      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'date_review' },
       { label: 'Нет',               icon: '❌', value: 'no',  next: 'result' },
     ]
   },
 
-  chat_duty: {
-    id: 'chat_duty',
-    q: 'В чате есть дежурный учитель прямо сейчас?',
-    options: [
-      { label: 'Да, я дежурю / кто-то дежурит', icon: '👤', value: 'yes', next: 'result' },
-      { label: 'Нет, чат без дежурного',         icon: '🔕', value: 'no',  next: 'result' },
-    ]
-  },
-
-  date_review:   { id: 'date_review',   type: 'date', q: 'Введите дату проверки (сегодняшнюю)',       field: 'reviewDate' },
+  date_review:   { id: 'date_review',   type: 'date', q: 'Введите сегодняшнюю дату проверки',              field: 'reviewDate' },
   date_deadline: { id: 'date_deadline', type: 'date', q: 'Введите дату окончания загрузки из карточки ДЗ', field: 'deadlineDate' },
 };
 
@@ -635,6 +638,15 @@ const endqSteps = {
 function calcExternResult() {
   const a = state.answers;
 
+  // OLD в предмете — всегда +4 недели, независимо от метки
+  if (a.old === 'yes') return {
+    type: 'success', срок: '+4 недели',
+    desc: 'В названии предмета есть OLD.',
+    note: 'Повторный доступ предоставляется на 28 дней от даты проверки.',
+    days: 28,
+  };
+
+  // Нет OLD, нет метки — не экстерн
   if (a.start === 'no') return {
     type: 'neutral', срок: 'Стандартные правила',
     desc: 'Ученик не является экстерном.',
@@ -642,13 +654,7 @@ function calcExternResult() {
     days: null,
   };
 
-  if (a.old === 'yes') return {
-    type: 'success', срок: '+4 недели',
-    desc: 'Предмет с пометкой OLD + метка 🎓.',
-    note: 'Повторный доступ предоставляется на 28 дней от даты проверки.',
-    days: 28,
-  };
-
+  // Метка есть, класс совпадает / отличается / Школа онлайн
   if (['same','diff','online'].includes(a.badge)) return {
     type: 'success', срок: '+4 недели',
     desc: 'Ученик является экстерном.',
@@ -656,6 +662,7 @@ function calcExternResult() {
     days: 28,
   };
 
+  // Метка «нет», текущая/будущая четверть
   if (a.badge === 'no' && a.quarter === 'current') return {
     type: 'neutral', срок: 'По стандартным срокам',
     desc: 'Метка «нет», работа за текущую или будущую четверть.',
@@ -663,6 +670,7 @@ function calcExternResult() {
     days: null,
   };
 
+  // Метка «нет», прошлая четверть
   if (a.badge === 'no' && a.quarter === 'past') return {
     type: 'warn', срок: '+1 день',
     desc: 'Метка «нет», работа за прошлую четверть.',
@@ -689,18 +697,28 @@ function calcEndqResult() {
     days: 1, dateField: 'reviewDate',
   };
 
-  // Загружено не в последний день, проверяется до дедлайна
+  // Загружено заранее, проверяется до дедлайна
   if (a.when_uploaded === 'before' && a.when_checked === 'before_deadline') return {
     type: 'success', срок: 'До даты окончания загрузки',
     desc: 'Работа загружена заранее, проверяется до дедлайна.',
-    note: 'Повторный доступ предоставляется до даты окончания загрузки, указанной в карточке ДЗ.',
+    note: 'Повторный доступ предоставляется до даты окончания загрузки из карточки ДЗ.',
     days: 0, dateField: 'deadlineDate',
   };
 
-  // Загружено не в последний день, проверяется в последний день или после
-  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline') return {
+  // Загружено заранее, проверяется в последний день или после — ученик написал в чат
+  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline'
+      && a.chat_request_before === 'yes') return {
     type: 'warn', срок: '+1 день',
-    desc: 'Работа загружена заранее, но проверяется в последний день или после.',
+    desc: 'Загружено заранее, проверяется в последний день или позже. Ученик написал в чат.',
+    note: 'Повторный доступ предоставляется на +1 день от даты, когда учитель приступил к дежурству.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено заранее, проверяется в последний день или после — ученик не писал в чат
+  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline'
+      && a.chat_request_before === 'no') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Загружено заранее, проверяется в последний день или позже.',
     note: 'Повторный доступ предоставляется на +1 день от сегодняшней даты.',
     days: 1, dateField: 'reviewDate',
   };
@@ -708,32 +726,23 @@ function calcEndqResult() {
   // Загружено в последний день — подозрение на почерк/голос
   if (a.when_uploaded === 'last_day' && a.suspicion === 'yes') return {
     type: 'warn', срок: '+1 день',
-    desc: 'Загружено в последний день, но есть подозрение на взрослый почерк / чужой голос.',
-    note: 'Это исключение из правила. Повторный доступ — +1 день от даты проверки.',
+    desc: 'Загружено в последний день, есть подозрение на взрослый почерк / чужой голос.',
+    note: 'Исключение из правила. Повторный доступ — +1 день от даты проверки.',
     days: 1, dateField: 'reviewDate',
   };
 
-  // Загружено в последний день — ученик просит в чате, дежурный есть
+  // Загружено в последний день — нет подозрений — ученик написал в чат
   if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
-      && a.chat_request === 'yes' && a.chat_duty === 'yes') return {
-    type: 'warn', срок: 'До 23:59 сегодня',
-    desc: 'Ученик обратился в чат, дежурный есть.',
-    note: 'Работа ещё не проверена — откройте повторный доступ до 23:59 (МСК) текущего дня.',
+      && a.chat_request_last === 'yes') return {
+    type: 'warn', срок: 'До 23:59 МСК сегодня',
+    desc: 'Загружено в последний день. Ученик написал в чат с просьбой открыть повторный доступ.',
+    note: '📌 Откройте повторный доступ до 23:59 (МСК) того дня, когда вы приступили к дежурству.',
     days: 0, dateField: 'reviewDate', endOfDay: true,
   };
 
-  // Загружено в последний день — ученик просит в чате, дежурного нет
+  // Загружено в последний день — нет подозрений — ученик не писал
   if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
-      && a.chat_request === 'yes' && a.chat_duty === 'no') return {
-    type: 'info', срок: 'До 23:59 дня дежурства',
-    desc: 'Ученик просил в чате, но дежурного не было.',
-    note: '📌 Когда вы приступите к дежурству — откройте повторный доступ до 23:59 (МСК) того дня, когда зайдёте в чат.',
-    days: null,
-  };
-
-  // Загружено в последний день — никаких исключений
-  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
-      && a.chat_request === 'no') return {
+      && a.chat_request_last === 'no') return {
     type: 'danger', срок: 'Повторный доступ не предоставляется',
     desc: 'Работа загружена в последний день, исключений нет.',
     note: 'По правилам повторный доступ в этом случае не открывается. Если есть сомнения — уточните у куратора.',
@@ -775,17 +784,17 @@ function accentColor() {
 // ═══════════════════════════════════════════════════════════════
 const bcLabels = {
   // extern
-  start:   { yes: '🎓 Метка: есть', no: '🎓 Метка: нет' },
   old:     { yes: 'OLD: да', no: 'OLD: нет' },
+  start:   { yes: '🎓 Метка: есть', no: '🎓 Метка: нет' },
   badge:   { same: 'Метка: да, класс совпадает', diff: 'Метка: да, класс отличается', online: 'Метка: Школа онлайн', no: 'Метка: нет' },
   quarter: { current: '📅 Четверть: текущая/будущая', past: '🗓 Четверть: прошлая' },
   // endq
-  ar:           { yes: '📝 АР: да', no: '📄 АР: нет' },
-  when_uploaded:{ last_day: '🔴 Загружено: в последний день', before: '🟢 Загружено: заранее' },
-  when_checked: { before_deadline: '✅ Проверка: до дедлайна', on_deadline: '⏰ Проверка: в последний день или позже' },
-  suspicion:    { yes: '🔍 Подозрение: есть', no: '✅ Подозрение: нет' },
-  chat_request: { yes: '💬 Просьба в чате: да', no: '❌ Просьба в чате: нет' },
-  chat_duty:    { yes: '👤 Дежурный: есть', no: '🔕 Дежурный: нет' },
+  ar:                  { yes: '📝 АР: да', no: '📄 АР: нет' },
+  when_uploaded:       { last_day: '🔴 Загружено: в последний день', before: '🟢 Загружено: заранее' },
+  when_checked:        { before_deadline: '✅ Проверка: до дедлайна', on_deadline: '⏰ Проверка: в последний день или позже' },
+  suspicion:           { yes: '🔍 Подозрение: есть', no: '✅ Подозрение: нет' },
+  chat_request_before: { yes: '💬 Чат: да', no: '❌ Чат: нет' },
+  chat_request_last:   { yes: '💬 Чат: да', no: '❌ Чат: нет' },
 };
 
 function renderBreadcrumb() {
@@ -823,8 +832,8 @@ function renderStep(stepId) {
   const steps = mode === 'extern' ? externSteps : endqSteps;
   const totalSteps = mode === 'extern' ? 4 : 6;
   const stepOrder = mode === 'extern'
-    ? ['start','old','badge','quarter','date']
-    : ['ar','when_uploaded','when_checked','suspicion','chat_request','chat_duty','date_review','date_deadline'];
+    ? ['old','start','badge','quarter','date']
+    : ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'];
 
   const idx = stepOrder.indexOf(stepId) + 1;
   updateProgress(idx, totalSteps);
@@ -1020,7 +1029,7 @@ function startMode(m) {
   document.getElementById('breadcrumb').innerHTML = '';
   document.getElementById('wizard').innerHTML = '';
 
-  const firstStep = m === 'extern' ? 'start' : 'ar';
+  const firstStep = m === 'extern' ? 'old' : 'ar';
   renderStep(firstStep);
 }
 
@@ -1030,7 +1039,7 @@ function resetWizard() {
   state.deadlineDate = null;
   document.getElementById('breadcrumb').innerHTML = '';
   document.getElementById('wizard').innerHTML = '';
-  const firstStep = mode === 'extern' ? 'start' : 'ar';
+  const firstStep = mode === 'extern' ? 'old' : 'ar';
   renderStep(firstStep);
 }
 </script>
