@@ -527,7 +527,7 @@ const externSteps = {
     id: 'old',
     q: 'В названии предмета есть слово OLD?',
     options: [
-      { label: 'Да, есть OLD', icon: '📂', value: 'yes', next: 'date' },
+      { label: 'Да, есть OLD', icon: '📂', value: 'yes', next: 'grade' },
       { label: 'Нет, OLD нет', icon: '✏️', value: 'no',  next: 'start' },
     ]
   },
@@ -545,10 +545,20 @@ const externSteps = {
     id: 'badge',
     q: 'Что указано в метке 🎓?',
     options: [
-      { label: '«да, ___ класс» — класс совпадает с классом ученика', icon: '🟢', value: 'same',   hint: '', next: 'date' },
-      { label: '«да, ___ класс» — класс отличается',                  icon: '🟡', value: 'diff',   hint: '', next: 'date' },
-      { label: '«да» + 111, 112 и т.д. — Школа онлайн',               icon: '🏫', value: 'online', hint: '', next: 'date' },
+      { label: '«да, ___ класс» — класс совпадает с классом ученика', icon: '🟢', value: 'same',   hint: '', next: 'grade' },
+      { label: '«да, ___ класс» — класс отличается',                  icon: '🟡', value: 'diff',   hint: '', next: 'grade' },
+      { label: '«да» + 111, 112 и т.д. — Школа онлайн',               icon: '🏫', value: 'online', hint: '', next: 'grade' },
       { label: '«нет»',                                                icon: '🔴', value: 'no',     hint: '', next: 'quarter' },
+    ]
+  },
+
+  grade: {
+    id: 'grade',
+    q: 'В каком классе учится ученик?',
+    hint: 'Это нужно для определения даты окончания учебного года',
+    options: [
+      { label: '9 или 11 класс',      icon: '🔵', value: 'grade_9_11',  next: 'result' },
+      { label: '1–8 или 10 класс',    icon: '🟣', value: 'grade_other', next: 'result' },
     ]
   },
 
@@ -638,13 +648,27 @@ const endqSteps = {
 function calcExternResult() {
   const a = state.answers;
 
-  // OLD в предмете — всегда +4 недели, независимо от метки
-  if (a.old === 'yes') return {
-    type: 'success', срок: '+4 недели',
-    desc: 'В названии предмета есть OLD.',
-    note: 'Повторный доступ предоставляется на 28 дней от даты проверки.',
-    days: 28,
-  };
+  // Фиксированные даты конца учебного года
+  const DATE_9_11    = '04.05.2026';
+  const DATE_OTHER   = '13.05.2026';
+
+  function gradeResult() {
+    if (a.grade === 'grade_9_11') return {
+      type: 'success', срок: `до ${DATE_9_11}`,
+      desc: 'Ученик в 9 или 11 классе — экстерн.',
+      note: `Повторный доступ предоставляется до ${DATE_9_11} 23:59 (МСК) — последний день загрузки для 9 и 11 классов.`,
+      days: null, fixedDate: DATE_9_11,
+    };
+    return {
+      type: 'success', срок: `до ${DATE_OTHER}`,
+      desc: 'Ученик в 1–8 или 10 классе — экстерн.',
+      note: `Повторный доступ предоставляется до ${DATE_OTHER} 23:59 (МСК) — последний день загрузки для 1–8 и 10 классов.`,
+      days: null, fixedDate: DATE_OTHER,
+    };
+  }
+
+  // OLD в предмете — фиксированная дата по классу
+  if (a.old === 'yes') return gradeResult();
 
   // Нет OLD, нет метки — не экстерн
   if (a.start === 'no') return {
@@ -654,13 +678,8 @@ function calcExternResult() {
     days: null,
   };
 
-  // Метка есть, класс совпадает / отличается / Школа онлайн
-  if (['same','diff','online'].includes(a.badge)) return {
-    type: 'success', срок: '+4 недели',
-    desc: 'Ученик является экстерном.',
-    note: 'Повторный доступ — 28 дней от даты проверки, независимо от четверти.',
-    days: 28,
-  };
+  // Метка есть — фиксированная дата по классу
+  if (['same','diff','online'].includes(a.badge)) return gradeResult();
 
   // Метка «нет», текущая/будущая четверть
   if (a.badge === 'no' && a.quarter === 'current') return {
@@ -787,6 +806,7 @@ const bcLabels = {
   old:     { yes: 'OLD: да', no: 'OLD: нет' },
   start:   { yes: '🎓 Метка: есть', no: '🎓 Метка: нет' },
   badge:   { same: 'Метка: да, класс совпадает', diff: 'Метка: да, класс отличается', online: 'Метка: Школа онлайн', no: 'Метка: нет' },
+  grade:   { grade_9_11: '🔵 Класс: 9 или 11', grade_other: '🟣 Класс: 1–8 или 10' },
   quarter: { current: '📅 Четверть: текущая/будущая', past: '🗓 Четверть: прошлая' },
   // endq
   ar:                  { yes: '📝 АР: да', no: '📄 АР: нет' },
@@ -830,9 +850,9 @@ function renderStep(stepId) {
   wizard.innerHTML = '';
 
   const steps = mode === 'extern' ? externSteps : endqSteps;
-  const totalSteps = mode === 'extern' ? 4 : 6;
+  const totalSteps = mode === 'extern' ? 5 : 6;
   const stepOrder = mode === 'extern'
-    ? ['old','start','badge','quarter','date']
+    ? ['old','start','badge','grade','quarter','date']
     : ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'];
 
   const idx = stepOrder.indexOf(stepId) + 1;
@@ -961,8 +981,16 @@ function renderResult() {
   desc.textContent = result.desc;
   card.appendChild(desc);
 
-  // Дата
-  if (result.days !== null) {
+  // Дата фиксированная (для экстернов конец года)
+  if (result.fixedDate) {
+    const dateEl = document.createElement('div');
+    dateEl.className = 'result-date';
+    dateEl.innerHTML = `📅 Дата окончания ПД: <strong>${result.fixedDate} 23:59 МСК</strong>`;
+    card.appendChild(dateEl);
+  }
+
+  // Дата вычисляемая
+  if (result.days !== null && !result.fixedDate) {
     const dateField = result.dateField || 'reviewDate';
     const baseDate = state[dateField];
     if (baseDate) {
