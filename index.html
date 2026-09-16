@@ -14,6 +14,7 @@
     --accent: #3B82C4;
     --accent2: #E07B2A;
     --accent3: #DC3545;
+    --accent-college: #6B4FA0;
     --text: #1A2233;
     --text-muted: #6B7A99;
     --success-bg: #EDF7F5;
@@ -93,7 +94,7 @@
   /* Выбор режима */
   .mode-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 14px;
     margin-bottom: 32px;
   }
@@ -146,6 +147,7 @@
 
   .mode-btn.mode-extern .mode-title { color: var(--accent); }
   .mode-btn.mode-endq .mode-title { color: var(--accent2); }
+  .mode-btn.mode-college .mode-title { color: var(--accent-college); }
 
   /* Разделитель */
   .divider {
@@ -162,6 +164,26 @@
     height: 1px;
     background: var(--border);
   }
+
+  /* Кнопка выхода в главное меню — видна на любом шаге визарда */
+  .menu-exit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Golos Text', sans-serif;
+    font-size: 13px;
+    padding: 6px 4px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: color 0.18s;
+  }
+  .menu-exit-btn:hover { color: var(--text); }
+  .mode-extern-active .menu-exit-btn:hover { color: var(--accent); }
+  .mode-endq-active .menu-exit-btn:hover { color: var(--accent2); }
+  .mode-college-active .menu-exit-btn:hover { color: var(--accent-college); }
 
   /* Прогресс */
   .progress-wrap { margin-bottom: 28px; }
@@ -182,6 +204,7 @@
 
   .mode-extern-active .progress-bar-fill { background: linear-gradient(90deg, var(--accent), #38B2AC); }
   .mode-endq-active .progress-bar-fill { background: linear-gradient(90deg, var(--accent2), #F6A623); }
+  .mode-college-active .progress-bar-fill { background: linear-gradient(90deg, var(--accent-college), #9B7FD1); }
 
   .progress-label {
     font-size: 11px;
@@ -210,6 +233,7 @@
 
   .breadcrumb-item .bc-val { color: var(--accent); font-weight: 600; }
   .mode-endq-active .breadcrumb-item .bc-val { color: var(--accent2); }
+  .mode-college-active .breadcrumb-item .bc-val { color: var(--accent-college); }
 
   /* Карточка */
   .card {
@@ -238,6 +262,7 @@
 
   .mode-extern-active .step-num { color: var(--accent); }
   .mode-endq-active .step-num { color: var(--accent2); }
+  .mode-college-active .step-num { color: var(--accent-college); }
 
   .question {
     font-size: 17px;
@@ -290,10 +315,12 @@
 
   .mode-extern-active .option-btn::before { background: var(--accent); }
   .mode-endq-active .option-btn::before { background: var(--accent2); }
+  .mode-college-active .option-btn::before { background: var(--accent-college); }
 
   .option-btn:hover { transform: translateX(4px); }
   .mode-extern-active .option-btn:hover { border-color: var(--accent); background: rgba(59,130,196,0.06); }
   .mode-endq-active .option-btn:hover { border-color: var(--accent2); background: rgba(224,123,42,0.06); }
+  .mode-college-active .option-btn:hover { border-color: var(--accent-college); background: rgba(107,79,160,0.06); }
 
   .option-btn:hover::before { transform: scaleY(1); }
 
@@ -320,6 +347,7 @@
 
   .date-input:focus { border-color: var(--accent); }
   .mode-endq-active .date-input:focus { border-color: var(--accent2); }
+  .mode-college-active .date-input:focus { border-color: var(--accent-college); }
   .date-input::placeholder { color: var(--text-muted); }
   .date-input.error { border-color: var(--danger) !important; }
 
@@ -349,6 +377,11 @@
 
   .mode-endq-active .btn-primary {
     background: linear-gradient(135deg, var(--accent2) 0%, #C46518 100%);
+    color: #FFFFFF;
+  }
+
+  .mode-college-active .btn-primary {
+    background: linear-gradient(135deg, var(--accent-college) 0%, #533D82 100%);
     color: #FFFFFF;
   }
 
@@ -488,11 +521,19 @@
         <span class="mode-title">Конец четверти</span>
         <span class="mode-desc">Последние дни загрузки ДЗ</span>
       </button>
+      <button class="mode-btn mode-college" onclick="startMode('college')">
+        <span class="mode-icon">🏫</span>
+        <span class="mode-title">Колледж</span>
+        <span class="mode-desc">Общеобразовательные предметы колледжа</span>
+      </button>
     </div>
   </div>
 
   <!-- Визард -->
   <div id="wizardSection" class="hidden">
+    <button class="menu-exit-btn" onclick="exitToMenu()">
+      <span>←</span> Главное меню
+    </button>
     <div class="divider" id="modeLabelDiv"></div>
     <div class="progress-wrap">
       <div class="progress-bar-bg">
@@ -515,7 +556,7 @@
 // ═══════════════════════════════════════════════════════════════
 //  СОСТОЯНИЕ
 // ═══════════════════════════════════════════════════════════════
-let mode = null; // 'extern' | 'endq'
+let mode = null; // 'extern' | 'endq' | 'college'
 const state = { answers: {}, reviewDate: null, deadlineDate: null };
 
 // ═══════════════════════════════════════════════════════════════
@@ -630,6 +671,109 @@ const endqSteps = {
 
   date_review:   { id: 'date_review',   type: 'date', q: 'Введите сегодняшнюю дату проверки',              field: 'reviewDate' },
   date_deadline: { id: 'date_deadline', type: 'date', q: 'Введите дату окончания загрузки из карточки ДЗ', field: 'deadlineDate' },
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  ШАГИ — КОЛЛЕДЖ
+//  Правила отправки на повтор такие же, что и в «Конец четверти»,
+//  но срок «до дедлайна» — не дата из карточки ДЗ, а фиксированная
+//  дата, определяемая неделей учебного плана колледжа.
+// ═══════════════════════════════════════════════════════════════
+function collegeFmtDate(d, m, y) {
+  return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+}
+
+// Учебный год колледжа считаем стартующим в августе — так даты
+// остаются актуальными год за годом без ручной правки.
+function collegeAcademicYears() {
+  const now = new Date();
+  const autumnYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  return { autumnYear, springYear: autumnYear + 1 };
+}
+
+const { autumnYear: collegeAutumnYear, springYear: collegeSpringYear } = collegeAcademicYears();
+
+// Фиксированные сроки повторной загрузки по неделям учебного плана
+const collegeDeadlines = {
+  w1_8:   collegeFmtDate(26, 10, collegeAutumnYear),  // 1–8 неделя, 1 семестр
+  w9_16:  collegeFmtDate(21, 12, collegeAutumnYear),  // 9–16 неделя, 1 семестр
+  w20_29: collegeFmtDate(22, 3,  collegeSpringYear),  // 20–29 неделя, 2 семестр
+  w30_38: collegeFmtDate(24, 5,  collegeSpringYear),  // 30–38 неделя, 2 семестр
+};
+
+const collegeSteps = {
+
+  ar: {
+    id: 'ar',
+    q: 'Это аттестационная работа (АР)?',
+    options: [
+      { label: 'Да, это АР',      icon: '📝', value: 'yes', next: 'date_review' },
+      { label: 'Нет, обычное ДЗ', icon: '📄', value: 'no',  next: 'when_uploaded' },
+    ]
+  },
+
+  when_uploaded: {
+    id: 'when_uploaded',
+    q: 'Когда ученик загрузил работу?',
+    options: [
+      { label: 'В последний день загрузки', icon: '🔴', value: 'last_day', next: 'suspicion' },
+      { label: 'Не в последний день',        icon: '🟢', value: 'before',   next: 'when_checked' },
+    ]
+  },
+
+  when_checked: {
+    id: 'when_checked',
+    q: 'Когда вы проверяете работу?',
+    hint: 'Сравните с датой окончания загрузки по расписанию недель колледжа',
+    options: [
+      { label: 'До последнего дня загрузки — ещё есть время', icon: '✅', value: 'before_deadline', next: 'college_week' },
+      { label: 'В последний день загрузки или после',          icon: '⏰', value: 'on_deadline',     next: 'chat_request_before' },
+    ]
+  },
+
+  chat_request_before: {
+    id: 'chat_request_before',
+    q: 'Ученик написал в чат с просьбой открыть повторный доступ?',
+    hint: 'Работа ещё не проверена на момент обращения',
+    options: [
+      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'date_review' },
+      { label: 'Нет',               icon: '❌', value: 'no',  next: 'date_review' },
+    ]
+  },
+
+  suspicion: {
+    id: 'suspicion',
+    q: 'Есть подозрение на взрослый почерк или чужой голос?',
+    options: [
+      { label: 'Да, есть подозрение', icon: '🔍', value: 'yes', hint: 'Факт списывания / взрослый почерк в карточке', next: 'date_review' },
+      { label: 'Нет подозрений',      icon: '✅', value: 'no',  next: 'chat_request_last' },
+    ]
+  },
+
+  chat_request_last: {
+    id: 'chat_request_last',
+    q: 'Ученик написал в чат с просьбой открыть повторный доступ?',
+    hint: 'Работа ещё не проверена на момент обращения',
+    options: [
+      { label: 'Да, написал в чат', icon: '💬', value: 'yes', next: 'date_review' },
+      { label: 'Нет',               icon: '❌', value: 'no',  next: 'result' },
+    ]
+  },
+
+  // Вместо ручного ввода даты дедлайна — выбор диапазона недель
+  college_week: {
+    id: 'college_week',
+    q: 'На какой неделе учебного плана выдано это ДЗ?',
+    hint: 'Срок повторной загрузки определяется по таблице недель колледжа',
+    options: [
+      { label: `1–8 неделя (до ${collegeDeadlines.w1_8})`,   hint: '1 семестр', icon: '🍂', value: 'w1_8',   next: 'result' },
+      { label: `9–16 неделя (до ${collegeDeadlines.w9_16})`, hint: '1 семестр', icon: '❄️', value: 'w9_16',  next: 'result' },
+      { label: `20–29 неделя (до ${collegeDeadlines.w20_29})`, hint: '2 семестр', icon: '🌱', value: 'w20_29', next: 'result' },
+      { label: `30–38 неделя (до ${collegeDeadlines.w30_38})`, hint: '2 семестр', icon: '☀️', value: 'w30_38', next: 'result' },
+    ]
+  },
+
+  date_review: { id: 'date_review', type: 'date', q: 'Введите сегодняшнюю дату проверки', field: 'reviewDate' },
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -757,6 +901,77 @@ function calcEndqResult() {
   };
 }
 
+function calcCollegeResult() {
+  const a = state.answers;
+
+  // АР — всегда +1 день
+  if (a.ar === 'yes') return {
+    type: 'success', срок: '+1 день',
+    desc: 'Аттестационная работа (АР).',
+    note: 'АР всегда получают повторный доступ на +1 день от даты проверки.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено заранее, проверяется до дедлайна — фиксированная дата по неделе учебного плана
+  if (a.when_uploaded === 'before' && a.when_checked === 'before_deadline') return {
+    type: 'success', срок: 'До даты по расписанию недель',
+    desc: 'Работа загружена заранее, проверяется до дедлайна.',
+    note: 'Повторный доступ предоставляется до даты, зафиксированной для выбранного диапазона недель учебного плана колледжа.',
+    days: 0, dateField: 'deadlineDate',
+  };
+
+  // Загружено заранее, проверяется в последний день или после — ученик написал в чат
+  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline'
+      && a.chat_request_before === 'yes') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Загружено заранее, проверяется в последний день или позже. Ученик написал в чат.',
+    note: 'Повторный доступ предоставляется на +1 день от даты, когда учитель приступил к дежурству.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено заранее, проверяется в последний день или после — ученик не писал в чат
+  if (a.when_uploaded === 'before' && a.when_checked === 'on_deadline'
+      && a.chat_request_before === 'no') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Загружено заранее, проверяется в последний день или позже.',
+    note: 'Повторный доступ предоставляется на +1 день от сегодняшней даты.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено в последний день — подозрение на почерк/голос
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'yes') return {
+    type: 'warn', срок: '+1 день',
+    desc: 'Загружено в последний день, есть подозрение на взрослый почерк / чужой голос.',
+    note: 'Исключение из правила. Повторный доступ — +1 день от даты проверки.',
+    days: 1, dateField: 'reviewDate',
+  };
+
+  // Загружено в последний день — нет подозрений — ученик написал в чат
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
+      && a.chat_request_last === 'yes') return {
+    type: 'warn', срок: 'До 23:59 МСК сегодня',
+    desc: 'Загружено в последний день. Ученик написал в чат с просьбой открыть повторный доступ.',
+    note: '📌 Откройте повторный доступ до 23:59 (МСК) того дня, когда вы приступили к дежурству.',
+    days: 0, dateField: 'reviewDate', endOfDay: true,
+  };
+
+  // Загружено в последний день — нет подозрений — ученик не писал
+  if (a.when_uploaded === 'last_day' && a.suspicion === 'no'
+      && a.chat_request_last === 'no') return {
+    type: 'danger', срок: 'Повторный доступ не предоставляется',
+    desc: 'Работа загружена в последний день, исключений нет.',
+    note: 'По правилам повторный доступ в этом случае не открывается. Если есть сомнения — уточните у куратора.',
+    days: null,
+  };
+
+  return {
+    type: 'danger', срок: 'Уточнить у куратора',
+    desc: 'Нестандартный случай.',
+    note: 'Пожалуйста, уточните ситуацию у куратора направления.',
+    days: null,
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  УТИЛИТЫ
 // ═══════════════════════════════════════════════════════════════
@@ -795,6 +1010,13 @@ const bcLabels = {
   suspicion:           { yes: '🔍 Подозрение: есть', no: '✅ Подозрение: нет' },
   chat_request_before: { yes: '💬 Чат: да', no: '❌ Чат: нет' },
   chat_request_last:   { yes: '💬 Чат: да', no: '❌ Чат: нет' },
+  // college
+  college_week: {
+    w1_8:   '📚 Неделя: 1–8 (1 сем.)',
+    w9_16:  '📚 Неделя: 9–16 (1 сем.)',
+    w20_29: '📚 Неделя: 20–29 (2 сем.)',
+    w30_38: '📚 Неделя: 30–38 (2 сем.)',
+  },
 };
 
 function renderBreadcrumb() {
@@ -829,11 +1051,13 @@ function renderStep(stepId) {
   const wizard = document.getElementById('wizard');
   wizard.innerHTML = '';
 
-  const steps = mode === 'extern' ? externSteps : endqSteps;
+  const steps = mode === 'extern' ? externSteps : mode === 'college' ? collegeSteps : endqSteps;
   const totalSteps = mode === 'extern' ? 4 : 6;
   const stepOrder = mode === 'extern'
     ? ['old','start','badge','quarter','date']
-    : ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'];
+    : mode === 'college'
+      ? ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','college_week']
+      : ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'];
 
   const idx = stepOrder.indexOf(stepId) + 1;
   updateProgress(idx, totalSteps);
@@ -927,6 +1151,7 @@ function renderStep(stepId) {
       btn.appendChild(textDiv);
       btn.addEventListener('click', () => {
         state.answers[step.id] = opt.value;
+        if (step.id === 'college_week') state.deadlineDate = collegeDeadlines[opt.value];
         wizard.innerHTML = '';
         renderStep(opt.next);
       });
@@ -941,7 +1166,7 @@ function renderStep(stepId) {
 function renderResult() {
   renderBreadcrumb();
   const wizard = document.getElementById('wizard');
-  const result = mode === 'extern' ? calcExternResult() : calcEndqResult();
+  const result = mode === 'extern' ? calcExternResult() : mode === 'college' ? calcCollegeResult() : calcEndqResult();
 
   const card = document.createElement('div');
   card.className = `result-card ${result.type}`;
@@ -994,14 +1219,18 @@ function renderResult() {
   reset.addEventListener('click', () => resetWizard());
   actions.appendChild(reset);
 
-  const switchBtn = document.createElement('button');
-  switchBtn.className = 'switch-btn';
-  switchBtn.innerHTML = mode === 'extern' ? '📅 Перейти к концу четверти' : '🎓 Перейти к экстернам';
-  switchBtn.addEventListener('click', () => {
-    const newMode = mode === 'extern' ? 'endq' : 'extern';
-    startMode(newMode);
+  const modeMeta = {
+    extern:  { icon: '🎓', label: 'Перейти к экстернам' },
+    endq:    { icon: '📅', label: 'Перейти к концу четверти' },
+    college: { icon: '🏫', label: 'Перейти к колледжу' },
+  };
+  Object.keys(modeMeta).filter(m => m !== mode).forEach(m => {
+    const switchBtn = document.createElement('button');
+    switchBtn.className = 'switch-btn';
+    switchBtn.innerHTML = `${modeMeta[m].icon} ${modeMeta[m].label}`;
+    switchBtn.addEventListener('click', () => startMode(m));
+    actions.appendChild(switchBtn);
   });
-  actions.appendChild(switchBtn);
 
   card.appendChild(actions);
   wizard.appendChild(card);
@@ -1020,11 +1249,14 @@ function startMode(m) {
   document.getElementById('wizardSection').classList.remove('hidden');
 
   const app = document.getElementById('app');
-  app.classList.remove('mode-extern-active','mode-endq-active');
-  app.classList.add(m === 'extern' ? 'mode-extern-active' : 'mode-endq-active');
+  app.classList.remove('mode-extern-active','mode-endq-active','mode-college-active');
+  app.classList.add(
+    m === 'extern' ? 'mode-extern-active' :
+    m === 'college' ? 'mode-college-active' : 'mode-endq-active'
+  );
 
   const divLabel = document.getElementById('modeLabelDiv');
-  divLabel.textContent = m === 'extern' ? '🎓 Экстерн' : '📅 Конец четверти';
+  divLabel.textContent = m === 'extern' ? '🎓 Экстерн' : m === 'college' ? '🏫 Колледж' : '📅 Конец четверти';
 
   document.getElementById('breadcrumb').innerHTML = '';
   document.getElementById('wizard').innerHTML = '';
@@ -1041,6 +1273,23 @@ function resetWizard() {
   document.getElementById('wizard').innerHTML = '';
   const firstStep = mode === 'extern' ? 'old' : 'ar';
   renderStep(firstStep);
+}
+
+function exitToMenu() {
+  mode = null;
+  state.answers = {};
+  state.reviewDate = null;
+  state.deadlineDate = null;
+
+  document.getElementById('wizardSection').classList.add('hidden');
+  document.getElementById('modeSelect').classList.remove('hidden');
+
+  const app = document.getElementById('app');
+  app.classList.remove('mode-extern-active','mode-endq-active','mode-college-active');
+
+  document.getElementById('breadcrumb').innerHTML = '';
+  document.getElementById('wizard').innerHTML = '';
+  document.getElementById('modeLabelDiv').textContent = '';
 }
 </script>
 </body>
