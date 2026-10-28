@@ -377,6 +377,27 @@
     display: none;
   }
 
+  /* Справка под полем ввода даты (стандартные сроки колледжа) */
+  .date-ref {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .date-ref strong { color: var(--text); }
+
+  /* Мелкая справка под вариантами ответа (сроки колледжа) */
+  .step-footer {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .step-footer strong { color: var(--text); font-weight: 600; }
+
   .btn-primary {
     border: none;
     border-radius: var(--radius-sm);
@@ -581,7 +602,8 @@ const state = { answers: {}, reviewDate: null, deadlineDate: null };
 let stepHistory = []; // стек пройденных шагов — для кнопки «Назад»
 
 const stepOrders = {
-  extern:  ['old','start','badge','quarter','date'],
+  // после 'date' идут шаги колледжевой ветки (метка «да» + направление колледжа)
+  extern:  ['old','start','badge','quarter','date','ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'],
   endq:    ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'],
   college: ['ar','when_uploaded','when_checked','chat_request_before','suspicion','chat_request_last','date_review','date_deadline'],
 };
@@ -623,6 +645,7 @@ const externSteps = {
       { label: '«да, ___ класс» — класс отличается',                  icon: '🟡', value: 'diff',    hint: '', next: 'date' },
       { label: '«да» + 111, 112 и т.д. — Школа онлайн',               icon: '🏫', value: 'online',  hint: '', next: 'date' },
       { label: '«да, курсы»',                                          icon: '📚', value: 'courses', hint: '', next: 'quarter' },
+      { label: '«да» + направление колледжа (напр. «да, Экономика1»)', icon: '🏛️', value: 'college', hint: 'Студент колледжа с меткой экстерна', next: 'ar' },
       { label: '«нет»',                                                icon: '🔴', value: 'no',      hint: '', next: 'quarter' },
     ]
   },
@@ -718,6 +741,50 @@ const endqSteps = {
 const collegeSteps = endqSteps;
 
 // ═══════════════════════════════════════════════════════════════
+//  ЭКСТЕРН → КОЛЛЕДЖ
+//  Студент колледжа с меткой экстерна («да, Граф.дизайн1» и т.п.).
+//  Срок загрузки в карточке у него продлён, но учителя ориентируются
+//  на стандартные сроки колледжа. Вопросы и расчёт — те же, что в
+//  «Конце четверти»/«Колледже», меняются только подсказки.
+//  Дни продления не учитываем.
+// ═══════════════════════════════════════════════════════════════
+const STANDARD_HINT = 'Ориентируйтесь на стандартный срок загрузки колледжа';
+
+// В карточке ДЗ у таких студентов вместо даты стоит «индивидуальный»,
+// поэтому в подсказках про карточку не упоминаем.
+const COLLEGE_DEADLINES =
+  '1–8 недели — до 26 октября<br>' +
+  '9–16 недели — до 21 декабря<br>' +
+  '20–29 недели — до 22 марта<br>' +
+  '30–38 недели — до 24 мая';
+
+Object.assign(externSteps, {
+  ar: endqSteps.ar,
+  chat_request_before: endqSteps.chat_request_before,
+  suspicion: endqSteps.suspicion,
+  chat_request_last: endqSteps.chat_request_last,
+  date_review: endqSteps.date_review,
+
+  // Шаги 5 и 6: сроки колледжа мелким шрифтом под вариантами ответа
+  when_uploaded: {
+    ...endqSteps.when_uploaded,
+    hint: STANDARD_HINT,
+    footer: '<strong>Стандартные сроки загрузки для колледжа:</strong><br>' + COLLEGE_DEADLINES,
+  },
+  when_checked: {
+    ...endqSteps.when_checked,
+    hint: STANDARD_HINT,
+    footer: '<strong>Стандартные сроки загрузки для колледжа:</strong><br>' + COLLEGE_DEADLINES,
+  },
+
+  date_deadline: {
+    id: 'date_deadline', type: 'date', field: 'deadlineDate',
+    q: 'Введите стандартный срок загрузки колледжа',
+    below: '<strong>Стандартные сроки загрузки:</strong><br>' + COLLEGE_DEADLINES,
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  РЕЗУЛЬТАТЫ
 // ═══════════════════════════════════════════════════════════════
 function calcExternResult() {
@@ -738,6 +805,15 @@ function calcExternResult() {
     note: 'Используйте обычный алгоритм предоставления повторного доступа.',
     days: null,
   };
+
+  // Метка «да» + направление колледжа — считаем как для колледжа
+  if (a.badge === 'college') {
+    const r = calcEndqResult();
+    if (r.dateField === 'deadlineDate') {
+      r.note = 'Повторный доступ предоставляется до стандартного срока загрузки колледжа.';
+    }
+    return r;
+  }
 
   // Метка есть, класс совпадает / отличается / Школа онлайн
   if (['same','diff','online'].includes(a.badge)) return {
@@ -878,7 +954,7 @@ const bcLabels = {
   // extern
   old:     { yes: 'OLD: да', no: 'OLD: нет' },
   start:   { yes: '🎓 Метка: есть', no: '🎓 Метка: нет' },
-  badge:   { same: 'Метка: да, класс совпадает', diff: 'Метка: да, класс отличается', online: 'Метка: Школа онлайн', courses: 'Метка: да, курсы', no: 'Метка: нет' },
+  badge:   { same: 'Метка: да, класс совпадает', diff: 'Метка: да, класс отличается', online: 'Метка: Школа онлайн', courses: 'Метка: да, курсы', college: 'Метка: да, направление колледжа', no: 'Метка: нет' },
   quarter: { current: '📅 Четверть: текущая/будущая', past: '🗓 Четверть: прошлая' },
   // endq
   ar:                  { yes: '📝 АР: да', no: '📄 АР: нет' },
@@ -910,11 +986,11 @@ function renderBreadcrumb() {
   });
 }
 
-function updateProgress(cur, total) {
+function updateProgress(cur, total, showTotal = true) {
   const pct = Math.round((cur / total) * 100);
   document.getElementById('progressBar').style.width = pct + '%';
   document.getElementById('progressLabel').textContent =
-    cur < total ? `Шаг ${cur} из ${total}` : 'Готово';
+    cur < total ? (showTotal ? `Шаг ${cur} из ${total}` : `Шаг ${cur}`) : 'Готово';
 }
 
 function renderStep(stepId) {
@@ -922,11 +998,14 @@ function renderStep(stepId) {
   wizard.innerHTML = '';
 
   const steps = mode === 'extern' ? externSteps : mode === 'college' ? collegeSteps : endqSteps;
-  const totalSteps = mode === 'extern' ? 4 : 6;
+  const isExtern = mode === 'extern';
+  // В экстернах путь может уходить в колледжевую ветку (до 8 шагов),
+  // поэтому номер шага считаем по реально пройденным шагам
+  const totalSteps = isExtern ? 9 : 6;
   const stepOrder = stepOrders[mode];
 
-  const idx = stepOrder.indexOf(stepId) + 1;
-  updateProgress(idx, totalSteps);
+  const idx = isExtern ? stepHistory.length + 1 : stepOrder.indexOf(stepId) + 1;
+  updateProgress(idx, totalSteps, !isExtern);
   renderBreadcrumb();
 
   if (stepId === 'result') {
@@ -1009,6 +1088,12 @@ function renderStep(stepId) {
 
     wrap.appendChild(input);
     wrap.appendChild(errEl);
+    if (step.below) {
+      const ref = document.createElement('div');
+      ref.className = 'date-ref';
+      ref.innerHTML = step.below;
+      wrap.appendChild(ref);
+    }
     wrap.appendChild(btn);
     card.appendChild(wrap);
 
@@ -1033,6 +1118,13 @@ function renderStep(stepId) {
       opts.appendChild(btn);
     });
     card.appendChild(opts);
+
+    if (step.footer) {
+      const footer = document.createElement('div');
+      footer.className = 'step-footer';
+      footer.innerHTML = step.footer;
+      card.appendChild(footer);
+    }
   }
 
   wizard.appendChild(card);
